@@ -1,0 +1,13 @@
+# Secrets - NEVER COMMIT THESE
+.env
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+*.key
+*.pem
+credentials/
+secrets/
+
+# Service account keys
+smart-plant-key.json
