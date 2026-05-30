@@ -8,6 +8,12 @@ _PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 _DATASET = os.getenv("BIGQUERY_DATASET")
 _TABLE = f"{_PROJECT_ID}.{_DATASET}.sensor_readings"
 
+if not _PROJECT_ID or not _DATASET:
+    raise ValueError(
+        "GCP_PROJECT_ID and BIGQUERY_DATASET must be set in environment. "
+        "Copy .env.example to .env and fill in the values."
+    )
+
 _client = None
 
 

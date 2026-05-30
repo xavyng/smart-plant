@@ -30,11 +30,11 @@ class InvestigatorAgent:
             )
         return "\n".join(lines)
 
-    def _build_prompt(self, readings: list[dict]) -> str:
+    def _build_prompt(self, readings: list[dict], minutes: int = 10) -> str:
         formatted = self._format_readings(readings)
         return (
             "You are an AI plant manager monitoring a factory floor.\n"
-            "Here are the last 10 minutes of sensor readings from 3 production lines:\n\n"
+            f"Here are the last {minutes} minutes of sensor readings from 3 production lines:\n\n"
             f"{formatted}\n\n"
             "Summarize the current plant status. If any sensor is in warning or critical "
             "status, explain the likely cause and recommend an action. Be concise."
@@ -42,7 +42,7 @@ class InvestigatorAgent:
 
     def investigate(self) -> str:
         readings = query_recent_readings(minutes=10)
-        prompt = self._build_prompt(readings)
+        prompt = self._build_prompt(readings, minutes=10)
         response = self.model.generate_content(prompt)
         return response.text
 
