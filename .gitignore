@@ -11,3 +11,9 @@ secrets/
 
 # Service account keys
 smart-plant-key.json
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
