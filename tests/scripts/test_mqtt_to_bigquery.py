@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 
 @patch("scripts.mqtt_to_bigquery.insert_readings")
