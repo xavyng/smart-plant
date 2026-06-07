@@ -6,6 +6,13 @@ load_dotenv()
 
 _PROJECT = os.getenv("GCP_PROJECT_ID")
 _DATASET = os.getenv("BIGQUERY_DATASET")
+
+if not _PROJECT or not _DATASET:
+    raise ValueError(
+        "GCP_PROJECT_ID and BIGQUERY_DATASET must be set in environment. "
+        "Copy .env.example to .env and fill in the values."
+    )
+
 _client = bigquery.Client(project=_PROJECT)
 
 
