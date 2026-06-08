@@ -12,6 +12,9 @@ websockets==12.0
 python-multipart==0.0.6
 httpx==0.27.2
 
+# Scheduling
+apscheduler==3.10.4
+
 # Fivetran
 requests==2.31.0
 
