@@ -16,6 +16,7 @@ httpx==0.27.2
 apscheduler==3.10.4
 
 # Fivetran
+fivetran-connector-sdk>=1.0.0
 requests==2.31.0
 
 # MQTT
