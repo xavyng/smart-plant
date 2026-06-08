@@ -43,14 +43,16 @@ def test_build_prompt_with_no_readings():
 
 
 @patch("backend.agents.investigator.query_recent_readings")
-def test_investigate_calls_gemini_and_returns_text(mock_query):
-    mock_query.return_value = [
+def test_investigate_calls_gemini_and_returns_finding(mock_query):
+    readings = [
         {"line_number": 2, "sensor_name": "motor_2b_vibration",
          "sensor_type": "vibration", "value": 9.1,
          "unit": "mm/s", "status": "critical"}
     ]
+    mock_query.return_value = readings
     with patch("backend.agents.investigator.vertexai.init"), \
-         patch("backend.agents.investigator.GenerativeModel") as MockModel:
+         patch("backend.agents.investigator.GenerativeModel") as MockModel, \
+         patch("backend.agents.orchestrator.handle_event") as mock_handle:
         mock_response = MagicMock()
         mock_response.text = "Line 2 vibration is critical. Bearing failure likely."
         MockModel.return_value.generate_content.return_value = mock_response
@@ -59,5 +61,6 @@ def test_investigate_calls_gemini_and_returns_text(mock_query):
         agent = InvestigatorAgent()
         result = agent.investigate()
 
-    assert result == "Line 2 vibration is critical. Bearing failure likely."
-    mock_query.assert_called_once_with(minutes=10)
+    assert result["diagnosis"] == "Line 2 vibration is critical. Bearing failure likely."
+    assert result["source"] == "investigator"
+    mock_query.assert_called_once_with(minutes=1)
