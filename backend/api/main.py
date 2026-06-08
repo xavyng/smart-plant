@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes.actions import router as actions_router
+from backend.api.routes.sensors import router as sensors_router
 import backend.scheduler as scheduler
 from backend.agents.action_agent import ActionAgent
 
@@ -22,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(actions_router)
+app.include_router(sensors_router)
 
 
 @app.get("/health")

@@ -17,7 +17,7 @@ dataset = bigquery.Dataset(dataset_id)
 dataset.location = "US"
 
 try:
-    dataset = client.create_dataset(dataset, exists_ok=True)  # Make an API request.
+    dataset = client.create_dataset(dataset, exists_ok=True)
     print(f"Dataset {dataset_id} created or already exists.")
 except Exception as e:
     print(f"Error creating dataset: {e}")

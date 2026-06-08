@@ -17,3 +17,14 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
+
+# Documents
+PRD.md
+docs/superpowers
+
+# Design assets
+Inspirations/
+
+# Next.js build output
+frontend/.next/
+frontend/node_modules/
