@@ -51,3 +51,11 @@ def approve_action(action_id: str, body: ApproveRequest, bq: bigquery.Client = D
     ).result()
 
     return {"action_id": action_id, "status": new_status}
+
+
+from backend.agents.briefing import BriefingAgent
+
+
+@router.get("/brief")
+def get_brief():
+    return {"brief": BriefingAgent().brief()}
