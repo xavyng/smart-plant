@@ -15,6 +15,9 @@ def _table() -> str:
 class ApproveRequest(BaseModel):
     decision: str
     approved_by: str
+    recipient: str | None = None
+    subject_override: str | None = None
+    body_override: str | None = None
 
 
 @router.get("/pending")
@@ -50,15 +53,53 @@ def approve_action(action_id: str, body: ApproveRequest, bq: bigquery.Client = D
         raise HTTPException(status_code=409, detail=f"terminal state: {rows[0]['status']}")
 
     new_status = "approved" if body.decision == "approve" else "rejected"
-    update_cfg = bigquery.QueryJobConfig(query_parameters=[
-        bigquery.ScalarQueryParameter("status", "STRING", new_status),
-        bigquery.ScalarQueryParameter("approved_by", "STRING", body.approved_by),
-        bigquery.ScalarQueryParameter("action_id", "STRING", action_id),
-    ])
-    bq.query(
-        f"UPDATE {_table()} SET status = @status, approved_by = @approved_by WHERE action_id = @action_id",
-        job_config=update_cfg,
-    ).result()
+
+    has_overrides = (
+        body.decision == "approve"
+        and any([body.recipient, body.subject_override, body.body_override])
+    )
+
+    if has_overrides:
+        payload_cfg = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter("action_id", "STRING", action_id)
+        ])
+        payload_rows = list(bq.query(
+            f"SELECT payload FROM {_table()} WHERE action_id = @action_id",
+            job_config=payload_cfg,
+        ).result())
+        raw_payload = payload_rows[0]["payload"] if payload_rows else None
+        try:
+            payload = json.loads(raw_payload) if isinstance(raw_payload, str) else (raw_payload or {})
+        except (ValueError, TypeError):
+            payload = {}
+
+        if body.recipient:
+            payload["recipient"] = body.recipient
+        if body.subject_override:
+            payload["subject"] = body.subject_override
+        if body.body_override:
+            payload["body"] = body.body_override
+
+        update_cfg = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter("status", "STRING", new_status),
+            bigquery.ScalarQueryParameter("approved_by", "STRING", body.approved_by),
+            bigquery.ScalarQueryParameter("payload", "STRING", json.dumps(payload)),
+            bigquery.ScalarQueryParameter("action_id", "STRING", action_id),
+        ])
+        bq.query(
+            f"UPDATE {_table()} SET status = @status, approved_by = @approved_by, payload = @payload WHERE action_id = @action_id",
+            job_config=update_cfg,
+        ).result()
+    else:
+        update_cfg = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter("status", "STRING", new_status),
+            bigquery.ScalarQueryParameter("approved_by", "STRING", body.approved_by),
+            bigquery.ScalarQueryParameter("action_id", "STRING", action_id),
+        ])
+        bq.query(
+            f"UPDATE {_table()} SET status = @status, approved_by = @approved_by WHERE action_id = @action_id",
+            job_config=update_cfg,
+        ).result()
 
     return {"action_id": action_id, "status": new_status}
 
