@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Send } from "lucide-react";
 import { type PendingAction, decideAction } from "@/lib/api";
+import { getActionBody } from "@/lib/format";
 
 interface ApproveModalProps {
   action: PendingAction;
@@ -16,9 +17,7 @@ export default function ApproveModal({ action, onClose, onSent }: ApproveModalPr
 
   const [to, setTo] = useState(str(p.recipient));
   const [subject, setSubject] = useState(str(p.subject) || action.action_type);
-  const [body, setBody] = useState(
-    str(p.body) || str(p.summary) || JSON.stringify(action.payload, null, 2),
-  );
+  const [body, setBody] = useState(getActionBody(action));
   const [loading, setLoading] = useState(false);
 
   async function handleSend() {

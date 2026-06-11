@@ -1,0 +1,14 @@
+.env
+*.json
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+frontend/
+scripts/
+tests/
+docs/
+fivetran_connector/
+*.md
+.git/

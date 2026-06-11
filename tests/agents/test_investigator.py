@@ -61,4 +61,4 @@ def test_investigate_calls_gemini_and_returns_finding(mock_query):
 
     assert result["diagnosis"] == "Line 2 vibration is critical. Bearing failure likely."
     assert result["source"] == "investigator"
-    mock_query.assert_called_once_with(minutes=1)
+    mock_query.assert_called_once_with(minutes=15)

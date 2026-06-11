@@ -18,9 +18,3 @@ apscheduler==3.10.4
 python-dotenv==1.0.0
 requests==2.33.1
 paho-mqtt==1.6.1
-fivetran-connector-sdk==2.9.1
-
-# Testing
-httpx>=0.28.1
-pytest==8.1.1
-pytest-mock==3.14.0

@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Workflow,
 } from "lucide-react";
-import { getBrief } from "@/lib/api";
+import { getBrief, getPipelineStatus, type PipelineStatus } from "@/lib/api";
 import Sidebar from "./Sidebar";
 import StatCard from "./StatCard";
 import BriefingPanel from "./BriefingPanel";
@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineStatus | null>(null);
   const [clock, setClock] = useState("");
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString("en-GB", { hour12: false }));
@@ -82,6 +83,20 @@ export default function Dashboard() {
       setLoadingBrief(false);
     }
   }, []);
+
+  const fetchPipeline = useCallback(async () => {
+    try {
+      setPipeline(await getPipelineStatus());
+    } catch {
+      // non-fatal
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPipeline();
+    const id = setInterval(fetchPipeline, 15000);
+    return () => clearInterval(id);
+  }, [fetchPipeline]);
 
   useEffect(() => {
     fetchBrief();
@@ -144,10 +159,10 @@ export default function Dashboard() {
             />
             <StatCard
               label="Pipeline"
-              value="Active"
-              sub="Fivetran connector running"
+              value={pipeline === null ? "..." : pipeline.paused ? "Paused" : "Active"}
+              sub={pipeline?.paused ? "Fivetran connector paused" : "Fivetran connector running"}
               icon={Workflow}
-              status="ok"
+              status={pipeline === null ? "normal" : pipeline.paused ? "critical" : "ok"}
             />
             <StatCard
               label="Current Shift"

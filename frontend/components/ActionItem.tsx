@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, X, ChevronDown, ChevronUp, Clock, User } from "lucide-react";
 import { type PendingAction, decideAction } from "@/lib/api";
+import { getActionBody, getActionTitle } from "@/lib/format";
 import ApproveModal from "@/components/ApproveModal";
 
 interface ActionItemProps {
@@ -28,54 +29,6 @@ function timeAgo(isoStr: string): string {
   if (diff < 60) return `${diff}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   return `${Math.floor(diff / 3600)}h ago`;
-}
-
-function getTitle(action: PendingAction): string {
-  const p = action.payload as Record<string, string>;
-  if (p.subject) return p.subject;
-  if (action.action_type === "sensor_anomaly") return "Sensor Anomaly Detected";
-  if (action.action_type === "pipeline_fix") return "Pipeline Fix Required";
-  return "Action Required";
-}
-
-function formatPipelinePayload(p: Record<string, string>): string {
-  const id = p.connector_id ?? "unknown";
-  const reason = p.reason ?? "unknown reason";
-  if (p.last_succeeded_at) {
-    const d = new Date(p.last_succeeded_at);
-    const ts = d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
-    return `Connector "${id}" stopped syncing — ${reason}. Last successful sync: ${ts}.`;
-  }
-  return `Connector "${id}" stopped syncing — ${reason}.`;
-}
-
-function getBody(action: PendingAction): string {
-  const p = action.payload as Record<string, unknown>;
-
-  const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
-
-  const direct =
-    str(p.diagnosis) ??
-    str(p.body) ??
-    str(p.description) ??
-    str(p.summary) ??
-    str(p.message);
-  if (direct) return direct;
-
-  const details = p.details as Record<string, unknown> | undefined;
-  const detailMsg = details ? str(details.message) : null;
-  if (detailMsg) return detailMsg;
-
-  if (str(p.reason)) {
-    const target = str(p.target);
-    return target ? `${target} — ${p.reason}` : String(p.reason);
-  }
-
-  if (action.action_type === "pipeline_fix" || action.action_type === "investigate_pipeline_failure") {
-    return formatPipelinePayload(p as Record<string, string>);
-  }
-
-  return JSON.stringify(action.payload, null, 2);
 }
 
 export default function ActionItem({ action, onDecision }: ActionItemProps) {
@@ -116,7 +69,7 @@ export default function ActionItem({ action, onDecision }: ActionItemProps) {
             {cfg.label}
           </span>
           <div className="flex-1 min-w-0">
-            <p className="text-slate-200 text-sm font-medium truncate">{getTitle(action)}</p>
+            <p className="text-slate-200 text-sm font-medium truncate">{getActionTitle(action)}</p>
             <div className="flex items-center gap-3 mt-1">
               <span className="flex items-center gap-1 text-slate-500 text-xs">
                 <User size={10} /> {action.proposed_by}
@@ -133,7 +86,7 @@ export default function ActionItem({ action, onDecision }: ActionItemProps) {
 
         {expanded && (
           <div className="px-4 pb-4 border-t border-border/50">
-            <p className="text-slate-300 text-sm leading-relaxed mt-3 whitespace-pre-line">{getBody(action)}</p>
+            <p className="text-slate-300 text-sm leading-relaxed mt-3 whitespace-pre-line">{getActionBody(action)}</p>
           </div>
         )}
 

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Plant — Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0e1a;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f8fafc;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 32px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .diagram {
+    width: 100%;
+    max-width: 1100px;
+  }
+  /* --- layer labels --- */
+  .layer-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #475569;
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+  /* --- rows --- */
+  .row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  /* --- cards --- */
+  .card {
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1px solid;
+    position: relative;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 2px;
+  }
+  .card-sub {
+    font-size: 10px;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  /* colour themes */
+  .green  { background: #052e16; border-color: #166534; }
+  .green .card-title { color: #4ade80; }
+  .green .badge { background: #14532d; color: #86efac; }
+
+  .blue   { background: #0c1f3a; border-color: #1e3a5f; }
+  .blue .card-title { color: #60a5fa; }
+  .blue .badge { background: #1e3a5f; color: #93c5fd; }
+
+  .purple { background: #1a0a2e; border-color: #4c1d95; }
+  .purple .card-title { color: #c084fc; }
+  .purple .badge { background: #2e1065; color: #d8b4fe; }
+
+  .amber  { background: #1c1000; border-color: #78350f; }
+  .amber .card-title { color: #fbbf24; }
+  .amber .badge { background: #451a03; color: #fcd34d; }
+
+  .red    { background: #1c0505; border-color: #7f1d1d; }
+  .red .card-title { color: #f87171; }
+  .red .badge { background: #450a0a; color: #fca5a5; }
+
+  .slate  { background: #0f172a; border-color: #1e293b; }
+  .slate .card-title { color: #94a3b8; }
+  .slate .badge { background: #1e293b; color: #cbd5e1; }
+
+  .teal   { background: #042f2e; border-color: #0f766e; }
+  .teal .card-title { color: #2dd4bf; }
+  .teal .badge { background: #134e4a; color: #5eead4; }
+
+  /* orchestrator is special */
+  .orch {
+    background: linear-gradient(135deg, #1a1040 0%, #0c1f3a 100%);
+    border: 2px solid #7c3aed;
+    box-shadow: 0 0 24px #7c3aed33;
+  }
+  .orch .card-title { color: #a78bfa; font-size: 14px; }
+
+  /* arrows */
+  .arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 4px;
+    min-width: 40px;
+  }
+  .arr-label {
+    font-size: 9px;
+    color: #475569;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+  .arr {
+    font-size: 18px;
+    color: #334155;
+    line-height: 1;
+  }
+  .arr-v {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 4px 0;
+  }
+  .arr-v .arr { font-size: 18px; }
+
+  /* dividers */
+  .divider {
+    height: 1px;
+    background: #1e293b;
+    margin: 20px 0;
+    position: relative;
+  }
+  .divider::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #0a0e1a;
+    padding: 0 12px;
+    font-size: 10px;
+    color: #334155;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* legend */
+  .legend {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+    padding: 14px 18px;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 1100px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* HITL callout */
+  .hitl-strip {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 1100px;
+  }
+  .hitl-card {
+    flex: 1;
+    background: #0f1629;
+    border: 1px solid #1e293b;
+    border-left: 3px solid;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .hitl-card h4 { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+  .hitl-card p  { font-size: 10px; color: #64748b; line-height: 1.5; }
+  .hitl-1 { border-left-color: #fbbf24; }
+  .hitl-1 h4 { color: #fbbf24; }
+  .hitl-2 { border-left-color: #f87171; }
+  .hitl-2 h4 { color: #f87171; }
+  .hitl-3 { border-left-color: #60a5fa; }
+  .hitl-3 h4 { color: #60a5fa; }
+</style>
+</head>
+<body>
+
+<h1>Smart Plant</h1>
+<p class="subtitle">8-Agent AI Factory Floor Monitor — Google Cloud Hackathon 2026 · Fivetran Track</p>
+
+<div class="diagram">
+
+  <!-- ── ROW 1: DATA INGESTION ── -->
+  <div class="layer-label">Data Ingestion</div>
+  <div class="row">
+    <div class="card green" style="flex:1.2">
+      <div class="card-title">IoT Sensors</div>
+      <div class="card-sub">Temperature, pressure, vibration, flow rate — live readings off the factory floor</div>
+      <span class="badge">MQTT</span>
+    </div>
+    <div class="arrows">
+      <div class="arr">→</div>
+      <div class="arr-label">publish</div>
+    </div>
+    <div class="card teal" style="flex:1.4">
+      <div class="card-title">Fivetran Connector SDK</div>
+      <div class="card-sub">Custom connector ingests MQTT stream. Cursor-based incremental sync to BigQuery.</div>
+      <span class="badge">fivetran-connector-sdk</span>
+    </div>
+    <div class="arrows">
+      <div class="arr">→</div>
+      <div class="arr-label">sync</div>
+    </div>
+    <div class="card blue" style="flex:1.4">
+      <div class="card-title">BigQuery</div>
+      <div class="card-sub">
+        <b style="color:#93c5fd">smart_plant_sensors</b> · sensor_readings<br>
+        <b style="color:#93c5fd">smart_plant_data</b> · approved_actions · agent_memory · investigations
+      </div>
+      <span class="badge">GCP</span>
+    </div>
+  </div>
+
+  <div class="divider" data-label="Agent Layer"></div>
+
+  <!-- ── ROW 2: POLLING AGENTS + ORCHESTRATOR ── -->
+  <div class="layer-label">Agents</div>
+  <div class="row" style="align-items:center">
+
+    <!-- left: polling agents -->
+    <div class="col" style="flex:1.2">
+      <div class="card amber">
+        <div class="card-title">Investigator Agent</div>
+        <div class="card-sub">Polls BQ every 60s. Rule-first: if any reading is warning/critical, calls Gemini for diagnosis.</div>
+        <span class="badge">polling · 60s</span>
+      </div>
+      <div class="card red">
+        <div class="card-title">Pipeline Health Agent</div>
+        <div class="card-sub">Polls Fivetran REST API every 5 min. Checks <code>succeeded_at</code> staleness &amp; <code>failed_at</code>.</div>
+        <span class="badge">polling · 5m</span>
+      </div>
+      <div class="card red" style="border-color:#7f1d1d88; background:#140303">
+        <div class="card-title">Pipeline Forensics Agent</div>
+        <div class="card-sub">Triggered by Pipeline Health on failure. Gemini root-cause analysis of connector status.</div>
+        <span class="badge">on-demand</span>
+      </div>
+    </div>
+
+    <!-- arrows in -->
+    <div class="arrows" style="min-width:50px">
+      <div class="arr">→</div>
+      <div class="arr-label" style="margin-bottom:8px">escalate</div>
+      <div class="arr">→</div>
+      <div class="arr-label">escalate</div>
+    </div>
+
+    <!-- orchestrator -->
+    <div class="card orch" style="flex:1.4; padding:18px 16px">
+      <div class="card-title" style="font-size:15px; margin-bottom:6px">ADK Orchestrator</div>
+      <div class="card-sub" style="font-size:11px; line-height:1.6">
+        Central event router built on <b style="color:#c084fc">google-adk</b>.<br>
+        Receives anomaly events, calls tools:<br>
+        &nbsp;• <code>log_to_memory()</code> — writes to agent_memory<br>
+        &nbsp;• <code>write_pending_action()</code> — queues HITL action
+      </div>
+      <span class="badge" style="background:#2e1065; color:#d8b4fe; margin-top:8px">google-adk · Gemini 2.0 Flash</span>
+    </div>
+
+    <!-- arrows out -->
+    <div class="arrows" style="min-width:50px">
+      <div class="arr">→</div>
+      <div class="arr-label">write</div>
+    </div>
+
+    <!-- right: memory + action + briefing + shift -->
+    <div class="col" style="flex:1.2">
+      <div class="card purple">
+        <div class="card-title">Memory Agent</div>
+        <div class="card-sub">Writes investigation events to BigQuery agent_memory. No LLM — pure BQ write.</div>
+        <span class="badge">BQ write</span>
+      </div>
+      <div class="card purple" style="border-color:#6d28d9">
+        <div class="card-title">Action Agent</div>
+        <div class="card-sub">Writes proposals to <code>approved_actions</code> as <em>pending</em>. Polls every 10s — executes on approval.</div>
+        <span class="badge">HITL · Gmail SMTP</span>
+      </div>
+      <div class="card blue" style="background:#071327">
+        <div class="card-title">Briefing Agent</div>
+        <div class="card-sub">On-demand narration. Queries last hour of investigations + memory → Gemini summary.</div>
+        <span class="badge">on-demand · Gemini</span>
+      </div>
+      <div class="card blue" style="background:#07121f">
+        <div class="card-title">Shift Handover Copilot</div>
+        <div class="card-sub">APScheduler fires at 6am, 2pm, 10pm. Reads 8h of activity → Gemini handover → pending action.</div>
+        <span class="badge">APScheduler · 3×/day</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" data-label="Human-in-the-Loop"></div>
+
+  <!-- ── ROW 3: HITL + EXECUTION ── -->
+  <div class="layer-label">Human-in-the-Loop &amp; Execution</div>
+  <div class="row">
+    <div class="card slate" style="flex:1.4">
+      <div class="card-title">FastAPI Backend</div>
+      <div class="card-sub">
+        <code>GET /api/v1/actions/pending</code><br>
+        <code>POST /api/v1/actions/{id}/approve</code><br>
+        <code>GET /api/v1/actions/brief</code><br>
+        Action poll loop runs as background thread on startup.
+      </div>
+      <span class="badge">FastAPI · Uvicorn</span>
+    </div>
+    <div class="arrows">
+      <div class="arr">⇄</div>
+      <div class="arr-label">REST</div>
+    </div>
+    <div class="card teal" style="flex:1.6">
+      <div class="card-title">Next.js Dashboard</div>
+      <div class="card-sub">
+        Pending action cards with expand/collapse. Approve opens "Review &amp; Send" modal — operator edits subject, recipient, body before sending. Auto-polls every 10s.
+      </div>
+      <span class="badge">Next.js 14 · Tailwind · localhost:3000</span>
+    </div>
+    <div class="arrows">
+      <div class="arr">→</div>
+      <div class="arr-label">approve</div>
+    </div>
+    <div class="card green" style="flex:1.2">
+      <div class="card-title">Gmail (SMTP)</div>
+      <div class="card-sub">Action Agent executes approved actions by sending professional formatted emails to maintenance / data engineering / incoming shift teams.</div>
+      <span class="badge">Gmail SMTP · TLS</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- HITL strip -->
+<div class="hitl-strip">
+  <div class="hitl-card hitl-1">
+    <h4>HITL Demo #1 — Sensor Anomaly</h4>
+    <p>Investigator detects critical reading → Gemini diagnosis → Action Agent writes <em>maintenance_email</em> pending → operator approves on dashboard → Gmail fires to maintenance team</p>
+  </div>
+  <div class="hitl-card hitl-2">
+    <h4>HITL Demo #2 — Pipeline Failure</h4>
+    <p>Pipeline Health detects stale Fivetran sync → Forensics runs root-cause → Action Agent writes <em>pipeline_fix</em> pending → operator approves → Gmail fires to data engineering</p>
+  </div>
+  <div class="hitl-card hitl-3">
+    <h4>HITL Demo #3 — Shift Handover</h4>
+    <p>APScheduler fires at 6am/2pm/10pm → Shift Handover Copilot queries 8h of BQ activity → Gemini writes handover prose → operator reviews &amp; approves → Gmail to incoming shift</p>
+  </div>
+</div>
+
+<!-- legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div> IoT / Ingestion</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div> Fivetran / BigQuery</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div> Investigator (sensor)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div> Pipeline agents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div> Orchestrator (ADK)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div> Memory / Action agents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div> Briefing / Handover / API</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div> FastAPI backend</div>
+</div>
+
+</body>
+</html>

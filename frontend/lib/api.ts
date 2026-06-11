@@ -87,3 +87,16 @@ export async function getActionStats(): Promise<ActionStats> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+export interface PipelineStatus {
+  paused: boolean | null;
+  sync_state: string;
+  last_succeeded: string | null;
+  failed_at: string | null;
+}
+
+export async function getPipelineStatus(): Promise<PipelineStatus> {
+  const res = await fetch(`${BASE}/api/v1/pipeline/status`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}

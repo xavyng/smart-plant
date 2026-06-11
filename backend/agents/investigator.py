@@ -45,10 +45,10 @@ class InvestigatorAgent:
         )
 
     def investigate(self) -> dict | None:
-        readings = query_recent_readings(minutes=1)
+        readings = query_recent_readings(minutes=15)
         if not has_anomaly(readings):
             return None
-        response = self._client.models.generate_content(model=_MODEL, contents=self._build_prompt(readings, minutes=1))
+        response = self._client.models.generate_content(model=_MODEL, contents=self._build_prompt(readings, minutes=15))
         finding = {"source": "investigator", "diagnosis": response.text, "raw_readings": readings}
         self._get_handle_event()(event_type="sensor_anomaly", payload=finding)
         return finding

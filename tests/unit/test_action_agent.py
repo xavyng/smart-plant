@@ -1,6 +1,27 @@
+import sys
 import json
 import pytest
 from unittest.mock import MagicMock, patch
+
+# google-cloud-bigquery is not installed in the local dev environment;
+# stub it so action_agent can be imported in tests.
+_bq_mock = MagicMock()
+
+def _scalar_param(name, type_, value):
+    m = MagicMock()
+    m.name = name
+    m.value = value
+    return m
+
+def _query_job_config(**kwargs):
+    m = MagicMock()
+    m.query_parameters = kwargs.get("query_parameters", [])
+    return m
+
+_bq_mock.ScalarQueryParameter.side_effect = _scalar_param
+_bq_mock.QueryJobConfig.side_effect = _query_job_config
+sys.modules.setdefault("google.cloud.bigquery", _bq_mock)
+sys.modules.setdefault("google.cloud", MagicMock(bigquery=_bq_mock))
 
 
 @pytest.fixture
@@ -65,3 +86,90 @@ def test_poll_once_returns_empty_when_no_approved(agent):
     mock_bq = MagicMock()
     mock_bq.query.return_value.result.return_value = []
     assert agent._poll_once(bq_client=mock_bq) == []
+
+
+# _repair_connector tests
+
+def test_repair_connector_success_sync_only():
+    from backend.agents.action_agent import _repair_connector
+    with patch("requests.post") as mock_post:
+        mock_post.return_value.raise_for_status.return_value = None
+        success, msg = _repair_connector("conn123", {"paused": False})
+    assert success is True
+    assert msg == "repair triggered: sync forced"
+    assert "/force" in mock_post.call_args[0][0]
+
+
+def test_repair_connector_success_unpause_and_sync():
+    from backend.agents.action_agent import _repair_connector
+    with patch("requests.patch") as mock_patch, patch("requests.post") as mock_post:
+        mock_patch.return_value.raise_for_status.return_value = None
+        mock_post.return_value.raise_for_status.return_value = None
+        success, msg = _repair_connector("conn123", {"paused": True})
+    assert success is True
+    assert msg == "repair triggered: unpaused + sync forced"
+    mock_patch.assert_called_once()
+    mock_post.assert_called_once()
+
+
+def test_repair_connector_unpause_fails():
+    from backend.agents.action_agent import _repair_connector
+    with patch("requests.patch") as mock_patch, patch("requests.post") as mock_post:
+        mock_patch.return_value.raise_for_status.side_effect = Exception("403 Forbidden")
+        success, msg = _repair_connector("conn123", {"paused": True})
+    assert success is False
+    assert "unpause failed" in msg
+    mock_post.assert_not_called()
+
+
+def test_repair_connector_sync_fails():
+    from backend.agents.action_agent import _repair_connector
+    with patch("requests.post") as mock_post:
+        mock_post.return_value.raise_for_status.side_effect = Exception("503 Service Unavailable")
+        success, msg = _repair_connector("conn123", {"paused": False})
+    assert success is False
+    assert "sync trigger failed" in msg
+
+
+# _execute_action integration tests
+
+@patch("backend.agents.action_agent._send_email")
+@patch("requests.post")
+def test_execute_action_pipeline_fix_sends_email_on_success(mock_post, mock_email):
+    from backend.agents.action_agent import _execute_action
+    mock_post.return_value.raise_for_status.return_value = None
+    row = {
+        "action_id": "abc-123",
+        "action_type": "pipeline_fix",
+        "payload": json.dumps({
+            "subject": "Pipeline failure",
+            "connector_id": "conn456",
+            "connector_status": {"paused": False, "id": "conn456"},
+            "reason": "sync stale",
+        }),
+    }
+    _execute_action(row)
+    mock_email.assert_called_once()
+    subject = mock_email.call_args[0][1]
+    assert "[Pipeline Repaired]" in subject
+
+
+@patch("backend.agents.action_agent._send_email")
+@patch("requests.post")
+def test_execute_action_pipeline_fix_sends_email_on_failure(mock_post, mock_email):
+    from backend.agents.action_agent import _execute_action
+    mock_post.return_value.raise_for_status.side_effect = Exception("503")
+    row = {
+        "action_id": "abc-456",
+        "action_type": "pipeline_fix",
+        "payload": json.dumps({
+            "subject": "Pipeline failure",
+            "connector_id": "conn456",
+            "connector_status": {"paused": False, "id": "conn456"},
+            "reason": "sync stale",
+        }),
+    }
+    _execute_action(row)
+    mock_email.assert_called_once()
+    subject = mock_email.call_args[0][1]
+    assert "[Pipeline Repair Failed]" in subject

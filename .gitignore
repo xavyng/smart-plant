@@ -1,5 +1,9 @@
 # Secrets - NEVER COMMIT THESE
 .env
+.deploy-env.yaml
+
+# Logs
+*.log
 *.json
 !package.json
 !package-lock.json

@@ -5,6 +5,7 @@ import time
 import threading
 import smtplib
 import ssl
+import requests
 from email.mime.text import MIMEText
 from datetime import datetime, timezone
 from google.cloud import bigquery
@@ -19,6 +20,10 @@ _POLL_INTERVAL = 10
 
 _GMAIL_USER = os.getenv("GMAIL_USER")
 _GMAIL_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+
+_FIVETRAN_API_KEY = os.getenv("FIVETRAN_API_KEY")
+_FIVETRAN_API_SECRET = os.getenv("FIVETRAN_API_SECRET")
+_FIVETRAN_CONNECTOR_ID = os.getenv("FIVETRAN_CONNECTOR_ID")
 
 _client = None
 
@@ -48,6 +53,24 @@ def _send_email(to: str, subject: str, body: str) -> None:
     except Exception as e:
         print(f"action_agent: email send failed to {to}: {e}")
         raise
+
+
+def _repair_connector(connector_id: str, connector_status: dict) -> tuple[bool, str]:
+    if not connector_id:
+        return False, "no connector_id available"
+    base_url = f"https://api.fivetran.com/v1/connectors/{connector_id}"
+    auth = (_FIVETRAN_API_KEY, _FIVETRAN_API_SECRET)
+    try:
+        r = requests.patch(base_url, json={"paused": False}, auth=auth, timeout=10)
+        r.raise_for_status()
+    except Exception as e:
+        return False, f"unpause failed: {e}"
+    try:
+        r = requests.post(f"{base_url}/force", json={}, auth=auth, timeout=10)
+        r.raise_for_status()
+    except Exception as e:
+        return False, f"sync trigger failed: {e}"
+    return True, "repair triggered: unpaused + sync forced"
 
 
 def _compose_email_body(action_type: str, payload: dict) -> str:
@@ -93,6 +116,13 @@ def _compose_email_body(action_type: str, payload: dict) -> str:
         forensics = payload.get("forensics") or {}
         report = forensics.get("forensics_report") if isinstance(forensics, dict) else None
         forensics_section = f"\nAI Root-Cause Analysis:\n{report}\n" if report else ""
+        repair_result = payload.get("repair_result")
+        repair_success = payload.get("repair_success")
+        if repair_result is not None:
+            status_word = "Successful" if repair_success else "Failed"
+            repair_section = f"\nRepair Attempt:\n  Status: {status_word}\n  Detail: {repair_result}\n"
+        else:
+            repair_section = ""
         return (
             f"Dear Data Engineering Team,\n\n"
             f"This is an automated notification regarding a data pipeline failure that has been detected "
@@ -101,7 +131,8 @@ def _compose_email_body(action_type: str, payload: dict) -> str:
             f"Failure Reason: {reason}\n"
             f"{last_sync_line}"
             f"Detection Time: {now}\n"
-            f"{forensics_section}\n"
+            f"{forensics_section}"
+            f"{repair_section}\n"
             f"Please investigate and resolve this issue as soon as possible to ensure data continuity "
             f"for plant monitoring operations.\n\n"
             f"Regards,\n"
@@ -160,7 +191,16 @@ def _execute_action(row: dict) -> None:
         recipient = payload.get("recipient") or os.getenv("ALERT_EMAIL_RECIPIENT", _GMAIL_USER)
         subject = payload.get("subject", action_type)
         if action_type in pipeline_action_types:
-            subject = f"[Pipeline Alert] {subject}"
+            connector_status = payload.get("connector_status") or {}
+            connector_id = (
+                payload.get("connector_id")
+                or (connector_status.get("id") if isinstance(connector_status, dict) else None)
+                or _FIVETRAN_CONNECTOR_ID
+            )
+            success, repair_msg = _repair_connector(connector_id, connector_status)
+            payload["repair_result"] = repair_msg
+            payload["repair_success"] = success
+            subject = f"[Pipeline {'Repaired' if success else 'Repair Failed'}] {subject}"
         body = _compose_email_body(action_type, payload)
         _send_email(recipient, subject, body)
     else:
