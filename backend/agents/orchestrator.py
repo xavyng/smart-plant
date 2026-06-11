@@ -11,7 +11,7 @@ from backend.agents.action_agent import ActionAgent
 
 load_dotenv()
 
-_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 _APP_NAME = "plant_orchestrator"
 _USER_ID = "system"
 
@@ -49,14 +49,15 @@ _agent = Agent(
         "then evaluate whether the event requires an action. "
         "If an action is warranted, call write_pending_action with a descriptive action_type, "
         "a JSON payload summarising what should be done, and proposed_by='orchestrator'. "
+        "The payload MUST include a 'summary' key with a plain-English sentence describing the recommended action. "
         "Always call both tools. Respond with a brief summary of what you logged and proposed."
     ),
     tools=[log_to_memory, write_pending_action],
 )
 
 
-def _run_agent(message: str) -> str:
-    session = _session_service.create_session(
+async def _run_agent_async(message: str) -> str:
+    session = await _session_service.create_session(
         app_name=_APP_NAME,
         user_id=_USER_ID,
     )
@@ -80,6 +81,10 @@ def _run_agent(message: str) -> str:
                 if part.text:
                     result_parts.append(part.text)
     return " ".join(result_parts) if result_parts else "no response"
+
+
+def _run_agent(message: str) -> str:
+    return asyncio.run(_run_agent_async(message))
 
 
 def handle_event(event_type: str, payload: dict) -> str:

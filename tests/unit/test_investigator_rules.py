@@ -2,9 +2,8 @@ from unittest.mock import patch, MagicMock
 
 
 def _get_has_anomaly():
-    with patch.dict("os.environ", {"GCP_PROJECT_ID": "p", "BIGQUERY_DATASET": "d",
-                                    "VERTEX_AI_PROJECT": "p"}):
-        with patch("vertexai.init"), patch("backend.agents.investigator.GenerativeModel"):
+    with patch.dict("os.environ", {"GCP_PROJECT_ID": "p", "BIGQUERY_DATASET": "d"}):
+        with patch("backend.agents.investigator.genai.Client"):
             from backend.agents.investigator import has_anomaly
             return has_anomaly
 
@@ -32,11 +31,10 @@ def test_has_anomaly_false_for_empty():
 @patch("backend.agents.investigator.query_recent_readings")
 def test_investigate_returns_none_when_all_normal(mock_query):
     mock_query.return_value = [{"status": "normal"}]
-    with patch.dict("os.environ", {"GCP_PROJECT_ID": "p", "BIGQUERY_DATASET": "d",
-                                    "VERTEX_AI_PROJECT": "p"}):
-        with patch("vertexai.init"), patch("backend.agents.investigator.GenerativeModel") as MockModel:
+    with patch.dict("os.environ", {"GCP_PROJECT_ID": "p", "BIGQUERY_DATASET": "d"}):
+        with patch("backend.agents.investigator.genai.Client") as MockClient:
             from backend.agents.investigator import InvestigatorAgent
             agent = InvestigatorAgent()
             result = agent.investigate()
     assert result is None
-    MockModel.return_value.generate_content.assert_not_called()
+    MockClient.return_value.models.generate_content.assert_not_called()

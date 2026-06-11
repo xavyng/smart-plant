@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 _PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-_DATASET = os.getenv("BIGQUERY_DATASET")
+_DATASET = os.getenv("SENSOR_DATASET", os.getenv("BIGQUERY_DATASET"))
 _TABLE = f"{_PROJECT_ID}.{_DATASET}.sensor_readings"
 
 if not _PROJECT_ID or not _DATASET:

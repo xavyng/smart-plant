@@ -48,7 +48,7 @@ export default function SensorTrendChart() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await getSensorReadings(60, line ?? undefined));
+      setData(await getSensorReadings(1440, line ?? undefined));
     } catch {
       /* keep stale */
     } finally {
@@ -69,7 +69,7 @@ export default function SensorTrendChart() {
   }, [data]);
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col flex-1">
       <div className="flex items-center justify-between px-5 py-4 border-b border-border gap-4 flex-wrap">
         <div>
           <h3 className="text-white text-sm font-semibold">Sensor Readings</h3>
@@ -101,16 +101,16 @@ export default function SensorTrendChart() {
         </div>
       </div>
 
-      <div className="p-5">
+      <div className="p-5 flex-1 min-h-0 flex flex-col">
         {loading ? (
-          <div className="h-[240px] bg-border/20 rounded-xl animate-pulse" />
+          <div className="flex-1 min-h-[240px] bg-border/20 rounded-xl animate-pulse" />
         ) : data.length === 0 ? (
-          <div className="h-[240px] flex flex-col items-center justify-center gap-2">
+          <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center gap-2">
             <p className="text-slate-500 text-sm">No sensor data yet</p>
             <p className="text-slate-700 text-xs">Run the sensor simulator to populate this chart</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={240}>
             <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
               <defs>
                 {sensorTypes.map((type, i) => {

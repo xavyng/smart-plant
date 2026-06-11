@@ -96,14 +96,14 @@ def main():
     """Main simulation loop."""
     
     # Connect to MQTT broker
-    print("🔌 Connecting to MQTT broker...")
+    print("Connecting to MQTT broker...")
     client = mqtt.Client()
     
     try:
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        print(f"✅ Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+        print(f"Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
     except Exception as e:
-        print(f"❌ Failed to connect to MQTT broker: {e}")
+        print(f"Failed to connect to MQTT broker: {e}")
         print("Make sure Mosquitto is running!")
         return
     
@@ -147,8 +147,7 @@ def main():
                     
                     # Print status (only show warnings/critical)
                     if reading["status"] != "normal":
-                        status_emoji = "🔴" if reading["status"] == "critical" else "⚠️"
-                        print(f"{status_emoji} Line {line_number} {sensor_type}: {reading['value']} {reading['unit']} ({reading['status']})")
+                        print(f"[{reading['status'].upper()}] Line {line_number} {sensor_type}: {reading['value']} {reading['unit']}")
             
             # Print progress every minute
             if int(elapsed_minutes) % 1 == 0 and time.time() - start_time < 3:
@@ -160,9 +159,9 @@ def main():
             time.sleep(5)
     
     except KeyboardInterrupt:
-        print("\n\n🛑 Stopping sensor simulation...")
+        print("\nStopping sensor simulation...")
         client.disconnect()
-        print("✅ Disconnected from MQTT broker")
+        print("Disconnected from MQTT broker")
 
 if __name__ == "__main__":
     main()

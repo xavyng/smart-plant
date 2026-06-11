@@ -64,6 +64,7 @@ export default function Dashboard() {
   const [brief, setBrief] = useState<string | null>(null);
   const [loadingActions, setLoadingActions] = useState(true);
   const [loadingBrief, setLoadingBrief] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [clock, setClock] = useState("");
@@ -76,8 +77,8 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, []);
 
-  const fetchActions = useCallback(async () => {
-    setLoadingActions(true);
+  const fetchActions = useCallback(async (background = false) => {
+    if (!background) setLoadingActions(true);
     try {
       setActions(await getPendingActions());
       setApiError(null);
@@ -101,15 +102,15 @@ export default function Dashboard() {
   }, []);
 
   const refresh = useCallback(() => {
-    fetchActions();
-    fetchBrief();
-  }, [fetchActions, fetchBrief]);
+    fetchActions(true);
+  }, [fetchActions]);
 
   useEffect(() => {
-    refresh();
+    fetchBrief();
+    fetchActions(false);
     timer.current = setInterval(refresh, REFRESH_MS);
     return () => { if (timer.current) clearInterval(timer.current); };
-  }, [refresh]);
+  }, [refresh, fetchBrief, fetchActions]);
 
   const criticalCount = actions.filter(
     (a) => a.action_type === "sensor_anomaly" || a.action_type === "pipeline_fix",
@@ -138,11 +139,16 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <span className="text-slate-400 text-sm tabular-nums font-medium">{clock}</span>
             <button
-              onClick={refresh}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 border border-border hover:text-white hover:border-border-light transition-all duration-150 cursor-pointer"
+              onClick={async () => {
+                setRefreshing(true);
+                await fetchActions(true);
+                setRefreshing(false);
+              }}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 border border-border hover:text-white hover:border-border-light disabled:opacity-50 transition-all duration-150 cursor-pointer"
             >
-              <RefreshCw size={11} />
-              Refresh
+              <RefreshCw size={11} className={refreshing ? "animate-spin" : ""} />
+              {refreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         </header>
@@ -182,7 +188,7 @@ export default function Dashboard() {
 
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 flex flex-col">
               <SensorTrendChart />
             </div>
             <div className="lg:col-span-2 space-y-4">
@@ -193,11 +199,11 @@ export default function Dashboard() {
 
           {/* Lower row */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 flex flex-col">
               <AlertHistoryChart />
             </div>
             <div className="lg:col-span-2">
-              <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden h-full">
                 <div className="px-5 py-4 border-b border-border">
                   <h3 className="text-white text-sm font-semibold">Agent Status</h3>
                   <p className="text-slate-500 text-xs mt-0.5">All systems operational</p>

@@ -41,21 +41,21 @@ export default function AlertHistoryChart() {
   }, []);
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col flex-1">
       <div className="px-5 py-4 border-b border-border">
         <h3 className="text-white text-sm font-semibold">Alert History</h3>
         <p className="text-slate-500 text-xs mt-0.5">Past 7 shifts by action type</p>
       </div>
-      <div className="p-5">
+      <div className="p-5 flex-1 min-h-0 flex flex-col">
         {loading ? (
-          <div className="h-[200px] bg-border/20 rounded-xl animate-pulse" />
+          <div className="flex-1 min-h-[200px] bg-border/20 rounded-xl animate-pulse" />
         ) : data.length === 0 ? (
-          <div className="h-[200px] flex flex-col items-center justify-center gap-2">
+          <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center gap-2">
             <p className="text-slate-500 text-sm">No action history yet</p>
             <p className="text-slate-700 text-xs">Actions will appear here once agents start running</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -16 }} barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A2A42" vertical={false} />
               <XAxis

@@ -12,7 +12,11 @@ export interface PendingAction {
 export async function getPendingActions(): Promise<PendingAction[]> {
   const res = await fetch(`${BASE}/api/v1/actions/pending`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const data: PendingAction[] = await res.json();
+  return data.map((a) => ({
+    ...a,
+    payload: typeof a.payload === "string" ? JSON.parse(a.payload) : a.payload,
+  }));
 }
 
 export async function getBrief(): Promise<string> {

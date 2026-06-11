@@ -2,15 +2,12 @@ import os
 import time
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+import google.genai as genai
 from backend.tools.bigquery_tool import query_recent_readings
 
 load_dotenv()
 
-_PROJECT = os.getenv("VERTEX_AI_PROJECT")
-_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
-_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 _POLL_INTERVAL_SECONDS = 60
 
 
@@ -20,8 +17,7 @@ def has_anomaly(readings: list[dict]) -> bool:
 
 class InvestigatorAgent:
     def __init__(self):
-        vertexai.init(project=_PROJECT, location=_LOCATION)
-        self.model = GenerativeModel(_MODEL)
+        self._client = genai.Client()
         self._handle_event = None
 
     def _get_handle_event(self):
@@ -52,7 +48,7 @@ class InvestigatorAgent:
         readings = query_recent_readings(minutes=1)
         if not has_anomaly(readings):
             return None
-        response = self.model.generate_content(self._build_prompt(readings, minutes=1))
+        response = self._client.models.generate_content(model=_MODEL, contents=self._build_prompt(readings, minutes=1))
         finding = {"source": "investigator", "diagnosis": response.text, "raw_readings": readings}
         self._get_handle_event()(event_type="sensor_anomaly", payload=finding)
         return finding

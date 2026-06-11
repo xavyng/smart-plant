@@ -36,7 +36,7 @@ export default function BriefingPanel({ brief, loading, onRefresh }: BriefingPan
             <div className="h-2.5 bg-border rounded animate-pulse w-3/5" />
           </div>
         ) : brief ? (
-          <p className="text-slate-400 text-sm leading-relaxed">{brief}</p>
+          <p className="text-slate-300 text-sm leading-relaxed">{brief}</p>
         ) : (
           <p className="text-slate-600 text-sm italic">No briefing available.</p>
         )}
@@ -47,7 +47,7 @@ export default function BriefingPanel({ brief, loading, onRefresh }: BriefingPan
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-50" />
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal" />
         </span>
-        <span className="text-slate-600 text-[10px] font-medium">Refreshes every 10s</span>
+        <span className="text-slate-600 text-[10px] font-medium">Click refresh to update</span>
       </div>
     </div>
   );

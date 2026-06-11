@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from google.cloud import bigquery
@@ -19,7 +20,16 @@ class ApproveRequest(BaseModel):
 @router.get("/pending")
 def get_pending(bq: bigquery.Client = Depends(get_bq_client)):
     rows = list(bq.query(f"SELECT * FROM {_table()} WHERE status = 'pending' ORDER BY created_at ASC").result())
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        if isinstance(d.get("payload"), str):
+            try:
+                d["payload"] = json.loads(d["payload"])
+            except (ValueError, TypeError):
+                pass
+        result.append(d)
+    return result
 
 
 @router.post("/{action_id}/approve")

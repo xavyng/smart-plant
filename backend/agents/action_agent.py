@@ -40,18 +40,19 @@ class ActionAgent:
     ) -> str:
         client = bq_client or _get_client()
         action_id = str(uuid.uuid4())
-        errors = client.insert_rows_json(_TABLE, [{
-            "action_id": action_id,
-            "action_type": action_type,
-            "payload": json.dumps(payload),
-            "status": "pending",
-            "proposed_by": proposed_by,
-            "approved_by": None,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "executed_at": None,
-        }])
-        if errors:
-            raise RuntimeError(f"action_agent: BQ write failed: {errors}")
+        cfg = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter("action_id", "STRING", action_id),
+            bigquery.ScalarQueryParameter("action_type", "STRING", action_type),
+            bigquery.ScalarQueryParameter("payload", "STRING", json.dumps(payload)),
+            bigquery.ScalarQueryParameter("proposed_by", "STRING", proposed_by),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.now(timezone.utc).isoformat()),
+        ])
+        client.query(
+            f"INSERT INTO `{_TABLE}` "
+            f"(action_id, action_type, payload, status, proposed_by, approved_by, created_at, executed_at) "
+            f"VALUES (@action_id, @action_type, @payload, 'pending', @proposed_by, NULL, @created_at, NULL)",
+            job_config=cfg,
+        ).result()
         return action_id
 
     def _poll_once(self, bq_client: bigquery.Client = None) -> list[str]:

@@ -2,8 +2,7 @@ from unittest.mock import MagicMock, patch
 
 
 def _make_agent():
-    with patch("backend.agents.investigator.vertexai.init"), \
-         patch("backend.agents.investigator.GenerativeModel"):
+    with patch("backend.agents.investigator.genai.Client"):
         from backend.agents.investigator import InvestigatorAgent
         return InvestigatorAgent()
 
@@ -50,12 +49,11 @@ def test_investigate_calls_gemini_and_returns_finding(mock_query):
          "unit": "mm/s", "status": "critical"}
     ]
     mock_query.return_value = readings
-    with patch("backend.agents.investigator.vertexai.init"), \
-         patch("backend.agents.investigator.GenerativeModel") as MockModel, \
-         patch("backend.agents.orchestrator.handle_event") as mock_handle:
+    with patch("backend.agents.investigator.genai.Client") as MockClient, \
+         patch("backend.agents.orchestrator.handle_event"):
         mock_response = MagicMock()
         mock_response.text = "Line 2 vibration is critical. Bearing failure likely."
-        MockModel.return_value.generate_content.return_value = mock_response
+        MockClient.return_value.models.generate_content.return_value = mock_response
 
         from backend.agents.investigator import InvestigatorAgent
         agent = InvestigatorAgent()

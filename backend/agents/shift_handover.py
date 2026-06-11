@@ -2,17 +2,14 @@ import os
 import json
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+import google.genai as genai
 from google.cloud import bigquery
 
 load_dotenv()
 
-_PROJECT = os.getenv("VERTEX_AI_PROJECT")
 _GCP = os.getenv("GCP_PROJECT_ID")
 _DATASET = os.getenv("BIGQUERY_DATASET")
-_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
-_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 _bq = None
 
@@ -26,8 +23,7 @@ def _get_bq():
 
 class ShiftHandoverCopilot:
     def __init__(self):
-        vertexai.init(project=_PROJECT, location=_LOCATION)
-        self.model = GenerativeModel(_MODEL)
+        self._client = genai.Client()
 
     def _query_last_8hrs(self) -> dict:
         bq = _get_bq()
@@ -51,7 +47,7 @@ class ShiftHandoverCopilot:
             "Cover incidents, actions taken, current status, and any open items. "
             "Plain English, 3-5 paragraphs."
         )
-        return self.model.generate_content(prompt).text
+        return self._client.models.generate_content(model=_MODEL, contents=prompt).text
 
     def run_handover(self):
         from backend.agents.action_agent import ActionAgent

@@ -28,3 +28,7 @@ Inspirations/
 # Next.js build output
 frontend/.next/
 frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
+
+# Fivetran connector debug output
+fivetran_connector/files/

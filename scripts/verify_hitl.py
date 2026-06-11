@@ -57,7 +57,7 @@ def run_flow2_pipeline_failure():
     resp = requests.post(
         f"{API}/api/v1/actions/{action['action_id']}/approve",
         json={"decision": "approve", "approved_by": "verify_script"},
-        timeout=5,
+        timeout=60,
     )
     resp.raise_for_status()
     print(f"[flow2] approved: {resp.json()}")
@@ -82,7 +82,7 @@ def run_flow3_shift_handover():
     resp = requests.post(
         f"{API}/api/v1/actions/{action['action_id']}/approve",
         json={"decision": "approve", "approved_by": "verify_script"},
-        timeout=5,
+        timeout=60,
     )
     resp.raise_for_status()
     print(f"[flow3] approved: {resp.json()}")

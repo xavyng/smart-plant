@@ -6,7 +6,7 @@ from backend.api.dependencies import get_bq_client
 router = APIRouter(prefix="/api/v1/sensors")
 
 _PROJECT = os.getenv("GCP_PROJECT_ID")
-_DATASET = os.getenv("BIGQUERY_DATASET")
+_DATASET = os.getenv("SENSOR_DATASET", os.getenv("BIGQUERY_DATASET"))
 
 
 def _table() -> str:
