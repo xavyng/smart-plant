@@ -43,8 +43,15 @@ class PipelineHealthAgent:
         if not healthy:
             print(f"pipeline_health: alert — {reason}")
             if orchestrator_handle:
+                forensics_result = {}
+                try:
+                    from backend.agents.pipeline_forensics import PipelineForensicsAgent
+                    forensics_result = PipelineForensicsAgent().analyze(status)
+                except Exception as e:
+                    print(f"pipeline_health: forensics error: {e}")
+
                 orchestrator_handle(event_type="pipeline_failure",
-                                    payload={"reason": reason, "connector_status": status})
+                                    payload={"reason": reason, "connector_status": status, "forensics": forensics_result})
         return healthy
 
     def run(self):
