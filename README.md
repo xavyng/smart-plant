@@ -1,63 +1,98 @@
-Readme · MD
-Copy
+# Smart Plant - AI Factory Monitor
 
-# Smart Plant - AI Plant Manager
- 
 **Built for Google Cloud Rapid Agent Hackathon 2026 (Fivetran Track)**
- 
-An intelligent multi-agent system that monitors factory operations, diagnoses issues, and proposes actions — all with human-in-the-loop approval.
- 
+
+An AI agent system that monitors factory sensors, detects anomalies, and proposes actions — with a human operator approving everything before it executes.
+
 ## What It Does
- 
-Smart Plant is your AI co-pilot for factory operations:
- 
-- **Monitors** 50+ sensors across 3 production lines in real-time
-- **Investigates** issues ("Why is Line 2 slow?" → "Motor 2B bearing failure likely")
-- **Proposes actions** (email supervisor, schedule maintenance, order parts)
-- **Waits for approval** before executing (human-in-the-loop)
-- **Auto-repairs** broken data pipelines using Fivetran MCP
+
+- Watches sensor data (temperature, vibration, throughput, pressure) across 3 production lines in real-time
+- Flags anomalies — e.g. motor temperature breach + vibration spike = likely bearing failure
+- Detects data pipeline failures and proposes an auto-repair via the Fivetran API
+- Queues actions (maintenance emails, pipeline fixes, shift handover summaries) for human approval
+- Operator reviews, edits if needed, and approves from a dashboard — then the agent executes
+
 ## Architecture
- 
-Factory Sensors → MQTT → Custom Fivetran Connector → BigQuery
-↓
-Gemini Agents
-↓
-Gmail | Calendar | Docs APIs
- 
+
+```
+Factory Sensors → Fivetran Custom Connector SDK → BigQuery
+                                                       ↓
+                                              AI Agents (Google ADK + Gemini 2.5 Flash)
+                                                       ↓
+                                         Approvals Dashboard (Next.js)
+                                                       ↓
+                                     Gmail / Fivetran API (on approval)
+```
+
 ## Tech Stack
- 
-- **AI**: Gemini 2.5 (via Google ADK)
+
+- **AI**: Gemini 2.5 Flash via Google ADK (multi-agent orchestration)
+- **Data Pipeline**: Fivetran + Custom Connector SDK (MQTT sensor ingestion)
 - **Data Warehouse**: Google BigQuery
-- **Data Pipeline**: Fivetran + Custom MQTT Connector SDK
-- **Pipeline Monitoring**: Fivetran MCP Server
-- **Frontend**: Next.js + React + Tailwind CSS
-- **Backend**: Python + FastAPI
-- **Infrastructure**: Google Cloud Run
+- **Backend**: Python + FastAPI — deployed on Google Cloud Run
+- **Frontend**: Next.js + Tailwind CSS — deployed on Vercel
+- **Notifications**: Gmail SMTP
+
+## Agents
+
+| Agent | Role |
+|---|---|
+| Investigator | Polls BigQuery every 60s, flags sensor anomalies |
+| Pipeline Forensics | Checks Fivetran connector health, proposes repair if stalled |
+| Action Agent | Executes approved actions (send email, unpause connector + force sync) |
+| Briefing Agent | Summarizes current plant state on demand using Gemini |
+| Shift Handover | Generates end-of-shift summary for incoming operator |
+
 ## Key Features
- 
-1. **Custom Fivetran Connector** - Ingests MQTT sensor data (custom-built using Connector SDK)
-2. **Multi-Agent System** - 6 specialized agents (Orchestrator, Investigator, Pipeline Health, Action, Briefing, Memory)
-3. **Real-time Dashboard** - WebSocket streaming of agent activity
-4. **Human-in-the-Loop** - All actions require approval
-5. **Auto-Healing Pipelines** - Detects and repairs broken Fivetran connectors
-## Getting Started
- 
-Coming soon...
- 
-## Demo Video
- 
-Coming soon...
- 
+
+- **HITL Approvals** — every AI-proposed action sits in a queue until a human approves, edits, or rejects it
+- **Live pipeline status** — dashboard card polls Fivetran every 15s and shows red/green connector state
+- **Auto-healing** — approving a pipeline_fix action PATCHes Fivetran to unpause the connector and triggers a force sync
+- **Edit before send** — operators can modify the recipient, subject, and body of any email before approving
+
+## Running Locally
+
+```bash
+# Backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r backend/requirements.txt
+uvicorn backend.api.main:app --reload
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Copy `.env.example` to `.env` and fill in your credentials (GCP project, BigQuery dataset, Fivetran API keys, Gmail app password).
+
+## Demo Scripts
+
+```bash
+# Inject a sensor anomaly (bypasses Gemini, goes straight to Approvals)
+venv\Scripts\python scripts\inject_pending_action.py anomaly
+
+# Inject a pipeline failure action
+venv\Scripts\python scripts\inject_pending_action.py pipeline
+
+# Inject a shift handover summary
+venv\Scripts\python scripts\inject_pending_action.py handover
+
+# Write critical sensor readings directly to BigQuery (triggers investigator)
+venv\Scripts\python scripts\inject_anomaly.py
+```
+
 ## License
- 
-Apache 2.0 - See [LICENSE](LICENSE) file for details
- 
+
+Apache 2.0
+
 ## Team
- 
+
 Xavier and Syed Aqeel
- 
+
 ---
- 
-**Hackathon**: Google Cloud Rapid Agent Hackathon 2026  
-**Track**: Fivetran  
-**Status**: In Development
+
+**Hackathon**: Google Cloud Rapid Agent Hackathon 2026
+**Track**: Fivetran
+**Live demo**: https://smart-plant-dashboard.vercel.app
