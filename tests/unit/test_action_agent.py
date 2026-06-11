@@ -45,7 +45,8 @@ def test_write_pending_raises_on_bq_error(agent):
         )
 
 
-def test_poll_once_executes_approved_row(agent):
+@patch("backend.agents.action_agent._send_email")
+def test_poll_once_executes_approved_row(mock_send, agent):
     mock_bq = MagicMock()
     mock_bq.query.return_value.result.side_effect = [
         [{"action_id": "xyz-789", "action_type": "maintenance_email",

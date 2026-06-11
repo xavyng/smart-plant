@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -49,8 +49,6 @@ const AGENTS = [
   { name: "Action Agent", color: "#8B5CF6" },
 ];
 
-const REFRESH_MS = 10_000;
-
 function currentShift() {
   const h = new Date().getHours();
   if (h >= 6 && h < 14) return { name: "Morning", hours: "06:00 – 14:00" };
@@ -65,8 +63,6 @@ export default function Dashboard() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [clock, setClock] = useState("");
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString("en-GB", { hour12: false }));
     tick();
@@ -89,8 +85,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchBrief();
-    timer.current = setInterval(fetchBrief, REFRESH_MS);
-    return () => { if (timer.current) clearInterval(timer.current); };
   }, [fetchBrief]);
 
   const shift = currentShift();
