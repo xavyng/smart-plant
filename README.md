@@ -89,7 +89,7 @@ Apache 2.0
 
 ## Team
 
-Xavier and Syed Aqeel
+Xavier
 
 ---
 
