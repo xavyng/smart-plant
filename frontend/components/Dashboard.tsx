@@ -9,10 +9,9 @@ import {
   RefreshCw,
   Workflow,
 } from "lucide-react";
-import { getBrief, getPendingActions, type PendingAction } from "@/lib/api";
+import { getBrief } from "@/lib/api";
 import Sidebar from "./Sidebar";
 import StatCard from "./StatCard";
-import ActionItem from "./ActionItem";
 import BriefingPanel from "./BriefingPanel";
 
 const SensorTrendChart = dynamic(() => import("./charts/SensorTrendChart"), {
@@ -60,9 +59,7 @@ function currentShift() {
 }
 
 export default function Dashboard() {
-  const [actions, setActions] = useState<PendingAction[]>([]);
   const [brief, setBrief] = useState<string | null>(null);
-  const [loadingActions, setLoadingActions] = useState(true);
   const [loadingBrief, setLoadingBrief] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -77,44 +74,25 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, []);
 
-  const fetchActions = useCallback(async (background = false) => {
-    if (!background) setLoadingActions(true);
-    try {
-      setActions(await getPendingActions());
-      setApiError(null);
-    } catch {
-      setApiError("API unreachable");
-    } finally {
-      setLoadingActions(false);
-      setLastRefreshed(new Date());
-    }
-  }, []);
-
   const fetchBrief = useCallback(async () => {
     setLoadingBrief(true);
     try {
       setBrief(await getBrief());
+      setApiError(null);
+      setLastRefreshed(new Date());
     } catch {
-      /* keep stale */
+      setApiError("API unreachable");
     } finally {
       setLoadingBrief(false);
     }
   }, []);
 
-  const refresh = useCallback(() => {
-    fetchActions(true);
-  }, [fetchActions]);
-
   useEffect(() => {
     fetchBrief();
-    fetchActions(false);
-    timer.current = setInterval(refresh, REFRESH_MS);
+    timer.current = setInterval(fetchBrief, REFRESH_MS);
     return () => { if (timer.current) clearInterval(timer.current); };
-  }, [refresh, fetchBrief, fetchActions]);
+  }, [fetchBrief]);
 
-  const criticalCount = actions.filter(
-    (a) => a.action_type === "sensor_anomaly" || a.action_type === "pipeline_fix",
-  ).length;
   const shift = currentShift();
 
   return (
@@ -141,7 +119,7 @@ export default function Dashboard() {
             <button
               onClick={async () => {
                 setRefreshing(true);
-                await fetchActions(true);
+                await fetchBrief();
                 setRefreshing(false);
               }}
               disabled={refreshing}
@@ -158,17 +136,17 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Pending Actions"
-              value={loadingActions ? "—" : actions.length}
-              sub={actions.length === 0 ? "All clear" : `${actions.length} awaiting review`}
+              value={0}
+              sub="All clear"
               icon={Clock}
-              status={loadingActions ? "normal" : actions.length > 0 ? "warning" : "ok"}
+              status="ok"
             />
             <StatCard
               label="Critical Alerts"
-              value={loadingActions ? "—" : criticalCount}
-              sub={criticalCount > 0 ? "Needs attention" : "No active alerts"}
+              value={0}
+              sub="No active alerts"
               icon={AlertTriangle}
-              status={loadingActions ? "normal" : criticalCount > 0 ? "critical" : "ok"}
+              status="ok"
             />
             <StatCard
               label="Pipeline"
@@ -192,7 +170,7 @@ export default function Dashboard() {
               <SensorTrendChart />
             </div>
             <div className="lg:col-span-2 space-y-4">
-              <ActionDonut pendingCount={actions.length} />
+              <ActionDonut pendingCount={0} />
               <BriefingPanel brief={brief} loading={loadingBrief} onRefresh={fetchBrief} />
             </div>
           </div>
@@ -229,37 +207,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Pending approvals */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                Pending Approvals
-              </h2>
-              {!loadingActions && actions.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-warning/15 text-warning">
-                  {actions.length}
-                </span>
-              )}
-            </div>
-
-            {loadingActions ? (
-              <div className="space-y-3">
-                {[0, 1].map((i) => (
-                  <div key={i} className="h-[72px] bg-card border border-border rounded-2xl animate-pulse" />
-                ))}
-              </div>
-            ) : actions.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-10 flex flex-col items-center text-center">
-                <CheckCircle2 size={24} className="text-success mb-3" strokeWidth={1.5} />
-                <p className="text-slate-300 text-sm font-medium">All caught up</p>
-                <p className="text-slate-600 text-xs mt-1">No pending actions at this time</p>
-              </div>
-            ) : (
-              actions.map((action) => (
-                <ActionItem key={action.action_id} action={action} onDecision={fetchActions} />
-              ))
-            )}
-          </div>
         </div>
       </main>
     </div>

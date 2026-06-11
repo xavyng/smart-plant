@@ -2,22 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   GitBranch,
   Bot,
   Settings,
+  CheckCircle2,
 } from "lucide-react";
+import { getPendingActions } from "@/lib/api";
 
 const NAV = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/pipeline", icon: GitBranch, label: "Pipeline" },
   { href: "/agents", icon: Bot, label: "Agents" },
+  { href: "/approvals", icon: CheckCircle2, label: "Approvals" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getPendingActions()
+      .then((a) => setPendingCount(a.length))
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="hidden md:flex w-56 min-h-screen flex-col bg-surface border-r border-border shrink-0">
@@ -54,9 +65,13 @@ export default function Sidebar() {
             >
               <Icon size={15} strokeWidth={active ? 2.5 : 1.75} />
               <span className="text-sm font-medium">{label}</span>
-              {active && (
+              {label === "Approvals" && pendingCount > 0 ? (
+                <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning">
+                  {pendingCount}
+                </span>
+              ) : active ? (
                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
-              )}
+              ) : null}
             </Link>
           );
         })}

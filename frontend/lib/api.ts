@@ -29,11 +29,12 @@ export async function getBrief(): Promise<string> {
 export async function decideAction(
   actionId: string,
   decision: "approve" | "reject",
+  overrides?: { recipient?: string; subject_override?: string; body_override?: string },
 ): Promise<void> {
   const res = await fetch(`${BASE}/api/v1/actions/${actionId}/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ decision, approved_by: "operator" }),
+    body: JSON.stringify({ decision, approved_by: "operator", ...overrides }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
