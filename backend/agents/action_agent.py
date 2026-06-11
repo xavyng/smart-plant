@@ -3,6 +3,8 @@ import uuid
 import json
 import time
 import threading
+import smtplib
+import ssl
 from datetime import datetime, timezone
 from google.cloud import bigquery
 from dotenv import load_dotenv
@@ -14,6 +16,9 @@ _DATASET = os.getenv("BIGQUERY_DATASET")
 _TABLE = f"{_PROJECT}.{_DATASET}.approved_actions"
 _POLL_INTERVAL = 10
 
+_GMAIL_USER = os.getenv("GMAIL_USER")
+_GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
+
 _client = None
 
 
@@ -24,10 +29,50 @@ def _get_client() -> bigquery.Client:
     return _client
 
 
+def _send_email(to: str, subject: str, body: str) -> None:
+    if not _GMAIL_USER or not _GMAIL_PASSWORD:
+        print(f"action_agent: email skipped (GMAIL_USER or GMAIL_PASSWORD not set)")
+        return
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(_GMAIL_USER, _GMAIL_PASSWORD)
+            message = f"Subject: {subject}\r\nFrom: {_GMAIL_USER}\r\nTo: {to}\r\n\r\n{body}"
+            server.sendmail(_GMAIL_USER, [to], message)
+        print(f"action_agent: email sent to {to} — {subject}")
+    except Exception as e:
+        print(f"action_agent: email send failed to {to}: {e}")
+        raise
+
+
 def _execute_action(row: dict) -> None:
     payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
-    print(f"action_agent: executing {row['action_type']} — {payload.get('subject', '')}")
-    # Gmail MCP / Drive MCP calls go here — stub for demo; wire after confirming MCP credentials
+    action_type = row["action_type"]
+
+    print(f"action_agent: executing {action_type} — {payload.get('subject', '')}")
+
+    email_action_types = [
+        "maintenance_email",
+        "shift_handover",
+        "Investigate_Sensor_Anomaly",
+        "investigate_sensor_anomaly"
+    ]
+
+    pipeline_action_types = ["pipeline_fix", "investigate_pipeline_failure"]
+
+    if action_type in email_action_types or action_type in pipeline_action_types:
+        recipient = payload.get("recipient") or os.getenv("ALERT_EMAIL_RECIPIENT", _GMAIL_USER)
+        subject = payload.get("subject", action_type)
+
+        if action_type in pipeline_action_types:
+            subject = f"[Pipeline Alert] {subject}"
+
+        body = payload.get("body") or payload.get("summary") or json.dumps(payload, indent=2)
+
+        _send_email(recipient, subject, body)
+    else:
+        print(f"action_agent: no handler for action_type '{action_type}'")
 
 
 class ActionAgent:
